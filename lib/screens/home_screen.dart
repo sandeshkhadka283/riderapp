@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:riderapp/screens/profile_page.dart';
+import 'package:riderapp/screens/qr.dart';
 import 'orders/orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -73,8 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 "👋 Hello, Rider",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
+
               CircleAvatar(
-                backgroundColor: Colors.redAccent,
+                backgroundColor: Colors.green,
                 radius: 26,
                 child: const Icon(Icons.person, color: Colors.white, size: 28),
               ),
@@ -206,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
   TableRow _buildTableHeader() {
     return TableRow(
       decoration: BoxDecoration(
-        color: Colors.redAccent.withOpacity(0.1),
+        color: Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       children: const [
@@ -240,14 +242,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _TableCell(
           data["cancelled"].toString(),
-          color: Colors.redAccent.withOpacity(0.9),
+          color: Colors.green.withOpacity(0.9),
         ),
       ],
     );
   }
 
   Widget _buildStatCard(
-      IconData icon, String title, int count, Color startColor, Color endColor) {
+    IconData icon,
+    String title,
+    int count,
+    Color startColor,
+    Color endColor,
+  ) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -274,14 +281,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               count.toString(),
               style: const TextStyle(
-                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -306,14 +319,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.circle_notifications, color: Colors.redAccent, size: 28),
+          const Icon(Icons.circle_notifications, color: Colors.green, size: 28),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 message,
-                style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -328,9 +344,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QRScannerScreen()),
+                );
+              },
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.qr_code_scanner, size: 28),
+            )
+          : null, // Only show FAB on Home tab
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: Container(
         margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -338,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.15),
+              color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.9),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -347,14 +378,17 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),
-          selectedItemColor: Colors.redAccent,
+          selectedItemColor: Colors.green,
           unselectedItemColor: Colors.grey,
           backgroundColor: Colors.transparent,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(icon: Icon(Icons.local_taxi), label: "Orders"),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_taxi),
+              label: "Orders",
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
           ],
         ),

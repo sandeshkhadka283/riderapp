@@ -96,9 +96,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     int total = 0;
     for (var index in selectedPackages) {
       final charge = packages[index]['deliveryCharge'];
-      if (charge is int)
+      if (charge is int) {
         total += charge;
-      else if (charge is double)
+      } else if (charge is double)
         total += charge.toInt();
     }
     return total;
@@ -108,9 +108,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     int total = 0;
     for (var index in selectedPackages) {
       final cod = packages[index]['cod'];
-      if (cod is int)
+      if (cod is int) {
         total += cod;
-      else if (cod is double)
+      } else if (cod is double)
         total += cod.toInt();
     }
     return total;
@@ -374,10 +374,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                     return GestureDetector(
                                       onTap: () {
                                         setState(() {
-                                          if (isSelected)
+                                          if (isSelected) {
                                             selectedPackages.remove(index);
-                                          else
+                                          } else {
                                             selectedPackages.add(index);
+                                          }
                                         });
                                       },
                                       child: AnimatedContainer(
@@ -409,12 +410,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                                   Colors.green.shade700,
                                               onChanged: (val) {
                                                 setState(() {
-                                                  if (val == true)
+                                                  if (val == true) {
                                                     selectedPackages.add(index);
-                                                  else
+                                                  } else {
                                                     selectedPackages.remove(
                                                       index,
                                                     );
+                                                  }
                                                 });
                                               },
                                             ),

@@ -18,6 +18,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   String _status = "not_submitted"; // not_submitted, under_review, approved
 
+  // -------------------- Image Picker --------------------
   Future<void> _pickImage(bool isProfile) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
@@ -35,6 +36,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // -------------------- Submit Profile --------------------
   void _submitProfile() {
     if (_formKey.currentState!.validate()) {
       if (_profileImage == null || _licenseImage == null) {
@@ -56,43 +58,50 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // -------------------- Build UI --------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("Rider Profile"),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        title: const Text(
+          "Rider Profile",
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
-        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildProfileHeader(),
-              const SizedBox(height: 20),
-              _status == "approved" ? _buildProfileView() : _buildForm(),
-            ],
-          ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildProfileHeader(), // -------------------- Header --------------------
+            const SizedBox(height: 20),
+            _status == "approved"
+                ? _buildProfileView()
+                : _buildForm(), // Form or View
+          ],
         ),
       ),
     );
   }
 
+  // ================== PROFILE HEADER ==================
   Widget _buildProfileHeader() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Colors.redAccent, Colors.deepOrangeAccent],
+          colors: [Colors.greenAccent, Colors.green],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -122,7 +131,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     child: const Icon(
                       Icons.camera_alt,
-                      color: Colors.redAccent,
+                      color: Colors.green,
                     ),
                   ),
                 ),
@@ -160,92 +169,39 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // ================== FORM ==================
   Widget _buildForm() {
     return Form(
       key: _formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 20),
-          GestureDetector(
+          _buildUploadCard(
+            title: "Upload Vehicle License",
+            file: _licenseImage,
             onTap: () => _pickImage(false),
-            child: Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 6,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-                image: _licenseImage != null
-                    ? DecorationImage(
-                        image: FileImage(_licenseImage!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-              ),
-              child: _licenseImage == null
-                  ? const Center(
-                      child: Text(
-                        "Tap to upload Vehicle License",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  : null,
-            ),
           ),
           const SizedBox(height: 20),
-          TextFormField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: "Full Name",
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              prefixIcon: const Icon(Icons.person),
-            ),
-            validator: (value) =>
-                value == null || value.isEmpty ? "Enter your name" : null,
-          ),
+          _buildTextField(_nameController, "Full Name", Icons.person),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _vehicleController,
-            decoration: InputDecoration(
-              labelText: "Vehicle Info",
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              prefixIcon: const Icon(Icons.directions_car),
-            ),
-            validator: (value) =>
-                value == null || value.isEmpty ? "Enter vehicle info" : null,
+          _buildTextField(
+            _vehicleController,
+            "Vehicle Info",
+            Icons.directions_car,
           ),
           const SizedBox(height: 30),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _submitProfile,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+          ElevatedButton(
+            onPressed: _submitProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Text(
-                "Submit Profile",
-                style: TextStyle(fontSize: 18, color: Colors.white),
-              ),
+            ),
+            child: const Text(
+              "Submit Profile",
+              style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),
         ],
@@ -253,6 +209,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // ================== PROFILE VIEW ==================
   Widget _buildProfileView() {
     return Column(
       children: [
@@ -265,37 +222,90 @@ class _ProfilePageState extends State<ProfilePage> {
           _vehicleController.text,
         ),
         const SizedBox(height: 12),
-        Container(
-          height: 200,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            image: DecorationImage(
-              image: FileImage(_licenseImage!),
-              fit: BoxFit.cover,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
+        _buildImageCard(_licenseImage!),
       ],
+    );
+  }
+
+  // ================== HELPER WIDGETS ==================
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+  ) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      validator: (value) =>
+          value == null || value.isEmpty ? "Enter $label" : null,
+    );
+  }
+
+  Widget _buildUploadCard({
+    required String title,
+    File? file,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 160,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+          image: file != null
+              ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
+              : null,
+        ),
+        child: file == null
+            ? Center(
+                child: Text(
+                  title,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                ),
+              )
+            : null,
+      ),
     );
   }
 
   Widget _buildInfoCard(IconData icon, String title, String value) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 4,
       child: ListTile(
-        leading: Icon(icon, color: Colors.redAccent),
+        leading: Icon(icon, color: Colors.green),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(value),
+      ),
+    );
+  }
+
+  Widget _buildImageCard(File image) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        image: DecorationImage(image: FileImage(image), fit: BoxFit.cover),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 4)),
+        ],
       ),
     );
   }

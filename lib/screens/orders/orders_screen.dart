@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:riderapp/screens/orders/order_map_page.dart';
 import 'order_detail_page.dart';
 
@@ -13,63 +14,111 @@ class OrdersScreen extends StatelessWidget {
       length: 4,
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F6FA),
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const Text("My Orders", style: TextStyle(color: Colors.white)),
-          backgroundColor: Colors.green,
-          actions: [
-            InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const OrdersMapPage()),
-                );
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.map_rounded,
-                          color: Colors.blue,
-                          size: 30,
-                        ),
-                        tooltip: "View Orders on Map",
-                        onPressed: () {},
-                      ),
-                      Text(
-                        "OPEN MAPS",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(150),
+          child: AppBar(
+            automaticallyImplyLeading: false,
+            elevation: 8,
+            shadowColor: Colors.black26,
+            backgroundColor: Colors.green.shade600,
+            surfaceTintColor: Colors.transparent,
+            centerTitle: true,
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                const Text(
+                  "📦 My Orders",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    letterSpacing: 0.6,
                   ),
                 ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTapDown: (_) => HapticFeedback.lightImpact(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OrdersMapPage()),
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF42A5F5), Color(0xFF1976D2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 8,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.map_rounded, color: Colors.white, size: 20),
+                        SizedBox(width: 6),
+                        Text(
+                          "OPEN MAPS",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.6,
+                            fontSize: 13.8,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white,
+                          size: 13,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: TabBar(
+                indicator: BoxDecoration(color: Colors.white),
+
+                labelColor: Colors.green.shade700,
+                unselectedLabelColor: Colors.white,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13.5,
+                ),
+                tabs: const [
+                  Tab(icon: Icon(Icons.local_shipping), text: "Ongoing"),
+                  Tab(icon: Icon(Icons.pending_actions), text: "Requested"),
+                  Tab(
+                    icon: Icon(Icons.check_circle_outline),
+                    text: "Completed",
+                  ),
+                  Tab(icon: Icon(Icons.cancel_outlined), text: "Cancelled"),
+                ],
               ),
             ),
-          ],
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-
-            tabs: [
-              Tab(text: "Ongoing", icon: Icon(Icons.directions_car)),
-              Tab(text: "Requested", icon: Icon(Icons.schedule)),
-              Tab(text: "Completed", icon: Icon(Icons.check_circle)),
-              Tab(text: "Cancelled", icon: Icon(Icons.cancel)),
-            ],
           ),
         ),
-        body: TabBarView(
-          children: const [
+        body: const TabBarView(
+          physics: BouncingScrollPhysics(),
+          children: [
             OrdersTab(tabName: "Ongoing"),
             OrdersTab(tabName: "Available"),
             OrdersTab(tabName: "Completed"),

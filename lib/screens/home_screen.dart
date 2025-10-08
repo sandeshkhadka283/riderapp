@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:riderapp/screens/earnings_dashboard_page.dart';
 import 'package:riderapp/screens/orders/order_detail_page.dart';
 import 'package:riderapp/screens/profile_page.dart';
 import 'package:riderapp/screens/qr.dart';
@@ -139,13 +140,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 Colors.redAccent,
                 Colors.deepOrange,
               ),
-              _buildStatCard(
-                Icons.monetization_on,
-                "Earnings",
-                5500,
-                Colors.teal,
-                Colors.green,
-              ),
+             InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EarningsDashboardPage()),
+    );
+  },
+  child: _buildStatCard(
+    Icons.monetization_on,
+    "Earnings",
+    5500,
+    Colors.teal,
+    Colors.green,
+  ),
+),
+
             ],
           ),
           const SizedBox(height: 30),

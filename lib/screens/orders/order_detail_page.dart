@@ -267,11 +267,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               color: themeColor,
                               children: [
                                 _buildInfoRow(
-                                  Icons.attach_money_outlined,
-                                  "COD Amount",
-                                  widget.codAmount,
-                                ),
-                                _buildInfoRow(
                                   Icons.access_time_outlined,
                                   "Date & Time",
                                   widget.dateTime,
@@ -485,12 +480,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
                             // Single improved View Map button
                             _roundedButton(
-                              icon: Icons.done,
+                              icon: Icons.done_all,
                               label: "Complete",
                               gradient: LinearGradient(
                                 colors: [
-                                  Colors.blue.shade400,
-                                  Colors.blue.shade600,
+                                  const Color.fromARGB(255, 0, 143, 36),
+                                  const Color.fromARGB(255, 45, 88, 36),
                                 ],
                               ),
                               onTap: () {},
@@ -505,21 +500,31 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   label: "Return",
                                   gradient: LinearGradient(
                                     colors: [
-                                      Colors.blue.shade400,
-                                      Colors.blue.shade600,
+                                      const Color.fromARGB(255, 155, 72, 34),
+                                      const Color.fromARGB(255, 229, 30, 30),
                                     ],
                                   ),
                                   onTap: () {},
                                 ),
-                                const SizedBox(height: 16),
 
                                 _roundedButton(
                                   icon: Icons.transfer_within_a_station,
                                   label: "Transfer",
                                   gradient: LinearGradient(
                                     colors: [
+                                      const Color.fromARGB(255, 119, 121, 0),
+                                      const Color.fromARGB(255, 177, 159, 0),
+                                    ],
+                                  ),
+                                  onTap: () {},
+                                ),
+                                _roundedButton(
+                                  icon: Icons.map_sharp,
+                                  label: "View Map",
+                                  gradient: LinearGradient(
+                                    colors: [
                                       Colors.blue.shade400,
-                                      Colors.blue.shade600,
+                                      const Color.fromARGB(255, 0, 41, 77),
                                     ],
                                   ),
                                   onTap: () {},

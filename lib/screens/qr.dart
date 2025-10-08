@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:riderapp/screens/orders/order_detail_page.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -21,6 +22,25 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: false);
+
+    // Simulate scanning delay of 4 seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OrderDetailPage(
+              orderNumber: 'grg',
+              status: 'grg',
+              pickup: 'ferf',
+              drop: 'fef',
+              codAmount: 'rtge',
+              dateTime: 'fedwf',
+            ),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -79,10 +99,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               height: scanSize,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.redAccent,
-                  width: 3,
-                ),
+                border: Border.all(color: Colors.redAccent, width: 3),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.redAccent.withOpacity(0.5),
@@ -168,7 +185,11 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             top: 50,
             left: 20,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 24),
+              icon: const Icon(
+                Icons.arrow_back_ios,
+                color: Colors.white,
+                size: 24,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -189,10 +210,18 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         height: 30,
         decoration: BoxDecoration(
           border: Border(
-            top: top ? const BorderSide(color: Colors.redAccent, width: 3) : BorderSide.none,
-            left: left ? const BorderSide(color: Colors.redAccent, width: 3) : BorderSide.none,
-            bottom: !top ? const BorderSide(color: Colors.redAccent, width: 3) : BorderSide.none,
-            right: !left ? const BorderSide(color: Colors.redAccent, width: 3) : BorderSide.none,
+            top: top
+                ? const BorderSide(color: Colors.redAccent, width: 3)
+                : BorderSide.none,
+            left: left
+                ? const BorderSide(color: Colors.redAccent, width: 3)
+                : BorderSide.none,
+            bottom: !top
+                ? const BorderSide(color: Colors.redAccent, width: 3)
+                : BorderSide.none,
+            right: !left
+                ? const BorderSide(color: Colors.redAccent, width: 3)
+                : BorderSide.none,
           ),
           borderRadius: BorderRadius.circular(6),
         ),

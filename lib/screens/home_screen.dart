@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:riderapp/screens/orders/order_detail_page.dart';
 import 'package:riderapp/screens/profile_page.dart';
 import 'package:riderapp/screens/qr.dart';
 import 'orders/orders_screen.dart';
@@ -303,42 +304,64 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActivityTile(String message, String time) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const OrderDetailPage(
+              orderNumber: '',
+              status: '',
+              pickup: '',
+              drop: '',
+              codAmount: '',
+              dateTime: '',
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.circle_notifications, color: Colors.green, size: 28),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 15,
+        );
+      },
+
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.circle_notifications,
+              color: Colors.green,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                time,
-                style: TextStyle(color: Colors.grey[600], fontSize: 13),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 2),
+                Text(
+                  time,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

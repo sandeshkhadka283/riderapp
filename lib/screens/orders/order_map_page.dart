@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:riderapp/screens/orders/order_detail_page.dart';
 
 class OrdersMapPage extends StatefulWidget {
-  const OrdersMapPage({super.key});
+  final List<dynamic> orders; // receive orders from parent
+  const OrdersMapPage({super.key, required this.orders});
 
   @override
   State<OrdersMapPage> createState() => _OrdersMapPageState();
@@ -11,7 +12,8 @@ class OrdersMapPage extends StatefulWidget {
 class _OrdersMapPageState extends State<OrdersMapPage> {
   final PageController _pageController = PageController(viewportFraction: 0.82);
   int _currentPage = 0;
-  final int _totalOrders = 6;
+
+  int get _totalOrders => widget.orders.length; // dynamic based on parent list
 
   void _nextPage() {
     if (_currentPage < _totalOrders - 1) {
@@ -130,6 +132,8 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                             onPageChanged: (index) =>
                                 setState(() => _currentPage = index),
                             itemBuilder: (context, index) {
+                              final order =
+                                  widget.orders[index]; // dynamic order
                               double scale = _currentPage == index ? 1 : 0.95;
                               return TweenAnimationBuilder(
                                 duration: const Duration(milliseconds: 350),
@@ -175,7 +179,6 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                   MainAxisAlignment
                                                       .spaceBetween,
                                               children: [
-                                                // Name + Order
                                                 Expanded(
                                                   child: Column(
                                                     crossAxisAlignment:
@@ -183,7 +186,8 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                             .start,
                                                     children: [
                                                       Text(
-                                                        "Yogesh Mandal",
+                                                        order['receiver_name'] ??
+                                                            'Unknown',
                                                         style: TextStyle(
                                                           fontSize: 16,
                                                           fontWeight:
@@ -194,7 +198,7 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                       ),
                                                       const SizedBox(height: 2),
                                                       Text(
-                                                        "Order #${index + 101} -- NR${index + 1}",
+                                                        "Order #${order['id'] ?? 'N/A'}",
                                                         style: TextStyle(
                                                           fontSize: 13,
                                                           color:
@@ -206,7 +210,6 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                     ],
                                                   ),
                                                 ),
-
                                                 // Call button
                                                 Container(
                                                   decoration: BoxDecoration(
@@ -228,7 +231,7 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                       size: 18,
                                                     ),
                                                     onPressed: () {
-                                                      // TODO: Call functionality
+                                                      // TODO: implement call functionality
                                                     },
                                                   ),
                                                 ),
@@ -258,7 +261,6 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                // Pickup
                                                 Row(
                                                   children: [
                                                     const Icon(
@@ -269,7 +271,8 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                     const SizedBox(width: 6),
                                                     Expanded(
                                                       child: Text(
-                                                        "Tarakeshwar, Kathmandu",
+                                                        order['pickup'] ??
+                                                            'Unknown pickup',
                                                         style: TextStyle(
                                                           color:
                                                               Colors.grey[700],
@@ -284,7 +287,6 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                   ],
                                                 ),
                                                 const SizedBox(height: 6),
-                                                // Drop
                                                 Row(
                                                   children: [
                                                     const Icon(
@@ -295,7 +297,8 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                     const SizedBox(width: 6),
                                                     Expanded(
                                                       child: Text(
-                                                        "Mahalaxmi, Kathmandu",
+                                                        order['drop'] ??
+                                                            'Unknown drop',
                                                         style: TextStyle(
                                                           color:
                                                               Colors.grey[700],
@@ -325,17 +328,53 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
-                                                      builder: (_) => OrderDetailPage(
-                                                        orderNumber:
-                                                            "${index + 101}",
-                                                        status: "Ongoing",
+                                                      builder: (context) => OrderDetailPage(
+                                                        orderNumber: order['id']
+                                                            .toString(),
+                                                        status:
+                                                            order['status'] ??
+                                                            "TABNAME",
                                                         pickup:
-                                                            "Tarakeshwar, Kathmandu",
+                                                            order['pickup'] ??
+                                                            'Unknown pickup',
                                                         drop:
-                                                            "Mahalaxmi, Kathmandu",
-                                                        codAmount: "Rs 1619",
+                                                            order['drop'] ??
+                                                            'Unknown drop',
+                                                        codAmount:
+                                                            "Rs ${order['cod_amount'] ?? 0}",
+                                                        deliveryCharge:
+                                                            "Rs ${order['delivery_charge'] ?? 0}",
                                                         dateTime:
-                                                            "Oct 07, 2025 - 10:30 AM",
+                                                            order['created_at'] ??
+                                                            'N/A',
+                                                        senderName:
+                                                            order['sender_name'] ??
+                                                            'N/A',
+                                                        senderPhone:
+                                                            order['sender_phone'] ??
+                                                            'N/A',
+                                                        senderAddress:
+                                                            order['pickup'] ??
+                                                            'Unknown pickup',
+                                                        receiverName:
+                                                            order['receiver_name'] ??
+                                                            'N/A',
+                                                        receiverPhone:
+                                                            order['receiver_phone'] ??
+                                                            'N/A',
+                                                        receiverAddress:
+                                                            order['drop'] ??
+                                                            'Unknown drop',
+                                                        packages:
+                                                            List<
+                                                              Map<
+                                                                String,
+                                                                dynamic
+                                                              >
+                                                            >.from(
+                                                              order['packages'] ??
+                                                                  [],
+                                                            ),
                                                       ),
                                                     ),
                                                   );
@@ -378,9 +417,9 @@ class _OrdersMapPageState extends State<OrdersMapPage> {
                                                   borderRadius:
                                                       BorderRadius.circular(12),
                                                 ),
-                                                child: const Text(
-                                                  "Rs 1619 COD",
-                                                  style: TextStyle(
+                                                child: Text(
+                                                  "Rs ${order['cod_amount'] ?? 0} COD",
+                                                  style: const TextStyle(
                                                     color: Colors.white,
                                                     fontWeight: FontWeight.bold,
                                                   ),

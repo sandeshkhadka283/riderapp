@@ -1,12 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:riderapp/config/supabase_config.dart';
 import 'package:riderapp/screens/orders/order_map_page.dart';
 import 'order_detail_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 
 // ------------------ Orders Screen ------------------
 
-class OrdersScreen extends StatelessWidget {
+class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
+
+  @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  final supabase = Supabase.instance.client;
+  bool isLoading = true;
+
+  // Store all orders in one list
+  List<dynamic> allOrders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAllOrders();
+  }
+
+  Future<void> fetchAllOrders() async {
+    setState(() => isLoading = true);
+    try {
+      final response = await supabase.from('orders').select();
+
+      setState(() {
+        allOrders = response;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching orders: $e');
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +76,9 @@ class OrdersScreen extends StatelessWidget {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const OrdersMapPage()),
+                      MaterialPageRoute(
+                        builder: (_) => OrdersMapPage(orders: allOrders),
+                      ),
                     );
                   },
                   child: AnimatedContainer(
@@ -120,9 +157,9 @@ class OrdersScreen extends StatelessWidget {
           physics: BouncingScrollPhysics(),
           children: [
             OrdersTab(tabName: "Ongoing"),
-            OrdersTab(tabName: "Available"),
+            OrdersTab(tabName: "Requested"),
             OrdersTab(tabName: "Completed"),
-            OrdersTab(tabName: "Returns"),
+            OrdersTab(tabName: "Cancelled"),
           ],
         ),
       ),
@@ -132,21 +169,106 @@ class OrdersScreen extends StatelessWidget {
 
 // ------------------ Orders Tab ------------------
 
-class OrdersTab extends StatelessWidget {
+class OrdersTab extends StatefulWidget {
   final String tabName;
   const OrdersTab({required this.tabName, super.key});
 
   @override
+  State<OrdersTab> createState() => _OrdersTabState();
+}
+
+class _OrdersTabState extends State<OrdersTab> {
+  final supabase = Supabase.instance.client;
+  bool isLoading = true;
+  List<dynamic> orders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchOrders();
+  }
+
+  Future<void> fetchOrders() async {
+    try {
+      final response = await supabase
+          .from('orders')
+          .select()
+          .eq('status', widget.tabName);
+
+      debugPrint('Orders response: $response'); // <-- add this
+      setState(() {
+        orders = response;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching orders: $e');
+      setState(() => isLoading = false);
+    }
+  }
+  // --- Add this helper function to your _OrdersTabState class ---
+
+  List<Map<String, dynamic>> _getSafePackages(dynamic rawPackages) {
+    if (rawPackages == null) {
+      return [];
+    }
+
+    if (rawPackages is List) {
+      // If it's already a list, safely cast and return it
+      return rawPackages.cast<Map<String, dynamic>>();
+    }
+
+    if (rawPackages is Map<String, dynamic>) {
+      // If it's a single map, wrap it in a list
+      return [rawPackages];
+    }
+
+    // Fallback for any unexpected data type
+    return [];
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: 6, // show 6 shimmer placeholders
+        itemBuilder: (context, index) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                color: Colors.white,
+              ),
+              height: 180, // approximate height of your order card
+            ),
+          );
+        },
+      );
+    }
+
+    if (orders.isEmpty) {
+      return const Center(
+        child: Text(
+          "No orders found",
+          style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: 6,
+      itemCount: orders.length,
       itemBuilder: (context, index) {
+        final order = orders[index];
+
         // Status color & icon
         Color statusColor;
         IconData statusIcon;
 
-        switch (tabName) {
+        switch (widget.tabName) {
           case "Completed":
             statusColor = Colors.green;
             statusIcon = Icons.check_circle;
@@ -171,12 +293,22 @@ class OrdersTab extends StatelessWidget {
               context,
               MaterialPageRoute(
                 builder: (context) => OrderDetailPage(
-                  orderNumber: "${index + 101}",
-                  status: tabName,
-                  pickup: "Tarakeshwar, Kathmandu",
-                  drop: "Mahalaxmi, Kathmandu",
-                  codAmount: "Rs 1619",
-                  dateTime: "Oct 07, 2025 - 10:30 AM",
+                  orderNumber: order['id'].toString(),
+                  status: order['status'] ?? widget.tabName,
+                  pickup: order['pickup'] ?? 'Unknown pickup',
+                  drop: order['drop'] ?? 'Unknown drop',
+                  codAmount: "Rs ${order['cod_amount'] ?? 0}",
+                  deliveryCharge: "Rs ${order['delivery_charge'] ?? 0}",
+                  dateTime: order['created_at'] ?? 'N/A',
+                  senderName: order['sender_name'] ?? 'N/A',
+                  senderPhone: order['sender_phone'] ?? 'N/A',
+                  senderAddress: order['pickup'] ?? 'Unknown pickup',
+                  receiverName: order['receiver_name'] ?? 'N/A',
+                  receiverPhone: order['receiver_phone'] ?? 'N/A',
+                  receiverAddress: order['drop'] ?? 'Unknown drop',
+
+                  // 🎯 FIX IS HERE: Safely extract/format the packages data
+                  packages: _getSafePackages(order['packages']),
                 ),
               ),
             );
@@ -218,7 +350,7 @@ class OrdersTab extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          "$tabName Order #${index + 101}",
+                          "${widget.tabName} Order #${order['id']}",
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
@@ -248,7 +380,7 @@ class OrdersTab extends StatelessWidget {
                             Icon(statusIcon, size: 16, color: Colors.white),
                             const SizedBox(width: 6),
                             Text(
-                              tabName,
+                              widget.tabName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -288,7 +420,7 @@ class OrdersTab extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              "Pickup: Tarakeshwar, Kathmandu",
+                              "Pickup: ${order['pickup'] ?? 'Unknown pickup'}",
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade700,
@@ -311,7 +443,7 @@ class OrdersTab extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              "Drop: Mahalaxmi, Kathmandu",
+                              "Drop: ${order['drop'] ?? 'Unknown drop'}",
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade700,
@@ -347,7 +479,7 @@ class OrdersTab extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        "Oct 07, 2025 - 10:30 AM",
+                        order['created_at'] ?? 'N/A',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -394,16 +526,16 @@ class OrdersTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(
+                          children: [
+                            const Icon(
                               Icons.attach_money,
                               size: 20,
                               color: Colors.green,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              "Rs 1619 COD",
-                              style: TextStyle(
+                              "Rs ${order['cod_amount'] ?? 0} COD",
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                                 color: Colors.green,
@@ -439,12 +571,29 @@ class OrdersTab extends StatelessWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => OrderDetailPage(
-                                    orderNumber: "${index + 101}",
-                                    status: tabName,
-                                    pickup: "Tarakeshwar, Kathmandu",
-                                    drop: "Mahalaxmi, Kathmandu",
-                                    codAmount: "Rs 1619",
-                                    dateTime: "Oct 07, 2025 - 10:30 AM",
+                                    orderNumber: order['id'].toString(),
+                                    status: order['status'] ?? widget.tabName,
+                                    pickup: order['pickup'] ?? 'Unknown pickup',
+                                    drop: order['drop'] ?? 'Unknown drop',
+                                    codAmount: "Rs ${order['cod_amount'] ?? 0}",
+                                    deliveryCharge:
+                                        "Rs ${order['delivery_charge'] ?? 0}",
+                                    dateTime: order['created_at'] ?? 'N/A',
+                                    senderName: order['sender_name'] ?? 'N/A',
+                                    senderPhone: order['sender_phone'] ?? 'N/A',
+                                    senderAddress:
+                                        order['pickup'] ?? 'Unknown pickup',
+                                    receiverName:
+                                        order['receiver_name'] ?? 'N/A',
+                                    receiverPhone:
+                                        order['receiver_phone'] ?? 'N/A',
+                                    receiverAddress:
+                                        order['drop'] ?? 'Unknown drop',
+
+                                    // 🎯 FIX IS HERE: Safely extract/format the packages data
+                                    packages: _getSafePackages(
+                                      order['packages'],
+                                    ),
                                   ),
                                 ),
                               );

@@ -1,21 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:riderapp/config/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OrderDetailPage extends StatefulWidget {
+  // Core order details
   final String orderNumber;
   final String status;
   final String pickup;
   final String drop;
   final String codAmount;
+  final String deliveryCharge;
   final String dateTime;
 
+  // Sender & Receiver
+  final String senderName;
+  final String senderPhone;
+  final String senderAddress;
+
+  final String receiverName;
+  final String receiverPhone;
+  final String receiverAddress;
+
+  // Packages
+  final List<Map<String, dynamic>> packages;
+
   const OrderDetailPage({
+    super.key,
     required this.orderNumber,
     required this.status,
     required this.pickup,
     required this.drop,
     required this.codAmount,
+    required this.deliveryCharge,
     required this.dateTime,
-    super.key,
+    required this.senderName,
+    required this.senderPhone,
+    required this.senderAddress,
+    required this.receiverName,
+    required this.receiverPhone,
+    required this.receiverAddress,
+    required this.packages,
   });
 
   @override
@@ -24,42 +48,136 @@ class OrderDetailPage extends StatefulWidget {
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
   late String currentStatus;
+  static const String _tableName = 'orders';
+  static const String _idColumn = 'id';
+  // ---------------------------------------------
 
   // Multi-select package indices
   final Set<int> selectedPackages = {};
 
-  // Sample package list with delivery charges and COD
-  final List<Map<String, dynamic>> packages = [
-    {
-      "id": "PKG-001",
-      "name": "T-Shirt Bundle",
-      "quantity": "2 pcs",
-      "weight": "1.2 kg",
-      "deliveryCharge": 150,
-      "cod": 500,
-    },
-    {
-      "id": "PKG-002",
-      "name": "Shoes Box",
-      "quantity": "1 pc",
-      "weight": "2.5 kg",
-      "deliveryCharge": 200,
-      "cod": 1200,
-    },
-    {
-      "id": "PKG-003",
-      "name": "Accessories",
-      "quantity": "3 pcs",
-      "weight": "0.8 kg",
-      "deliveryCharge": 100,
-      "cod": 300,
-    },
-  ];
+  late List<Map<String, dynamic>> packages;
+
+  // Inside the _OrderDetailPageState class:
+  // Helper function to fetch the current status from the database
+  Future<String> _getDbStatus() async {
+    try {
+      final data = await supabase
+          .from(_tableName)
+          .select('status')
+          .eq(_idColumn, widget.orderNumber)
+          .single();
+      return data['status'] as String;
+    } catch (e) {
+      print('❌ ERROR during DB status check: ${e.toString()}');
+      return 'Fetch Error';
+    }
+  }
+
+  // Inside the _OrderDetailPageState class:
+  Future<void> _updateOrderStatus(String newStatus) async {
+    const String tableName = 'orders';
+    const String orderNumberColumn = 'id';
+    String orderIdValue = widget.orderNumber;
+
+    // Log Status BEFORE Update
+    String statusBefore = await _getDbStatus();
+    print('📋 Status BEFORE: $statusBefore');
+
+    try {
+      if (orderIdValue.isEmpty) {
+        throw Exception("Order ID is empty or null.");
+      }
+
+      // Update in Supabase
+      final updateResult = await supabase
+          .from(tableName)
+          .update({'status': newStatus})
+          .eq(orderNumberColumn, orderIdValue)
+          .select();
+
+      if (updateResult.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Update failed. Check RLS policy!')),
+        );
+      } else {
+        if (mounted) {
+          setState(() {
+            currentStatus = newStatus;
+          });
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order status updated to $newStatus!')),
+        );
+
+        // ✅ After successful update, go back to the previous screen
+        Navigator.pop(
+          context,
+          newStatus,
+        ); // Optionally pass the new status back
+      }
+    } catch (e) {
+      print('❌ ERROR: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An unexpected error occurred.')),
+      );
+    }
+
+    String statusAfter = await _getDbStatus();
+    print('📋 Status AFTER: $statusAfter');
+  }
+
+  void _showCustomSnackBar(
+    String message,
+    Color startColor,
+    Color endColor,
+    IconData icon,
+  ) {
+    final snackBar = SnackBar(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent, // To allow gradient
+      elevation: 0,
+      duration: const Duration(seconds: 3),
+      content: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [startColor, endColor]),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 
   @override
   void initState() {
     super.initState();
     currentStatus = widget.status;
+    packages = widget.packages; // use passed packages
   }
 
   Color getStatusColor() {
@@ -232,8 +350,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 _buildInfoRow(
                                   Icons.person,
                                   "Receiver Name",
-                                  "Yogesh Mandal",
+                                  widget.receiverName,
                                 ),
+
                                 _buildInfoRow(
                                   Icons.location_on,
                                   "Drop Location",
@@ -360,6 +479,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 ),
                                 const SizedBox(height: 10),
 
+                                // Corrected ListView.separated (part of the Package Information section)
                                 ListView.separated(
                                   physics: const NeverScrollableScrollPhysics(),
                                   shrinkWrap: true,
@@ -426,8 +546,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 children: [
+                                                  // 🚨 FIX: Use null-aware operator '??'
                                                   Text(
-                                                    pkg["name"]!,
+                                                    pkg["name"] ??
+                                                        "Package Name Missing", // Safe access
                                                     style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -435,8 +557,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                                     ),
                                                   ),
                                                   const SizedBox(height: 4),
+                                                  // 🚨 FIX: Use null-aware operator '??' for other keys
                                                   Text(
-                                                    "ID: ${pkg["id"]} | Qty: ${pkg["quantity"]} | ${pkg["weight"]} | Delivery: Rs ${pkg["deliveryCharge"]} | COD: Rs ${pkg["cod"]}",
+                                                    "ID: ${pkg["id"] ?? 'N/A'} | Qty: ${pkg["quantity"] ?? 0} | ${pkg["weight"] ?? '0kg'} | Delivery: Rs ${pkg["deliveryCharge"] ?? 0} | COD: Rs ${pkg["cod"] ?? 0}",
                                                     style: const TextStyle(
                                                       color: Colors.black54,
                                                       fontSize: 13,
@@ -464,12 +587,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                 _buildInfoRow(
                                   Icons.person_outline,
                                   "Sender Name",
-                                  "Spring Is Green",
+                                  widget.senderName,
                                 ),
                                 _buildInfoRow(
                                   Icons.phone_outlined,
                                   "Phone",
-                                  "+977 9706243317",
+                                  widget.senderPhone,
                                 ),
                                 _buildInfoRow(
                                   Icons.location_on_outlined,
@@ -480,59 +603,147 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Single improved View Map button
-                            _roundedButton(
-                              icon: Icons.done_all,
-                              label: "Complete",
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color.fromARGB(255, 0, 143, 36),
-                                  const Color.fromARGB(255, 45, 88, 36),
-                                ],
-                              ),
-                              onTap: () {},
-                            ),
+                            // Buttons
+
+                            // 1. Show 'Mark Onboard' when the order is Requested (Awaiting pickup/start)
+                            currentStatus == "Requested"
+                                ? _roundedButton(
+                                    icon: Icons.run_circle_outlined,
+                                    label: "Mark Onboard",
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.amber.shade700,
+                                        Colors.amber.shade900,
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      // **UI CHANGE:** Call the async Supabase function to change status to "Ongoing"
+                                      _updateOrderStatus("Ongoing");
+                                      // The local setState will happen inside _updateOrderStatus() upon success
+                                    },
+                                  )
+                                // ----------------------------------------
+                                // 2. Complete Button (When status is "Ongoing")
+                                // ----------------------------------------
+                                : _roundedButton(
+                                    icon: Icons.done_all,
+                                    label: "Complete Order",
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color.fromARGB(255, 0, 143, 36),
+                                        Color.fromARGB(255, 45, 88, 36),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      // **UI CHANGE:** Call the async Supabase function to change status to "Completed"
+                                      _updateOrderStatus("Completed");
+                                      // The local setState will happen inside _updateOrderStatus() upon success
+                                    },
+                                  ),
+                            // If status is 'Completed' or 'Cancelled', no button is shown here (button is implicitly hidden).
                             const SizedBox(height: 16),
 
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _roundedButton(
-                                  icon: Icons.keyboard_return,
-                                  label: "Return",
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      const Color.fromARGB(255, 155, 72, 34),
-                                      const Color.fromARGB(255, 229, 30, 30),
-                                    ],
+                            // Utility Buttons (Show for Requested and Ongoing)
+                            if (currentStatus == "Ongoing" ||
+                                currentStatus == "Requested")
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _roundedButton(
+                                    icon: Icons.keyboard_return,
+                                    label: "Return",
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color.fromARGB(255, 155, 72, 34),
+                                        const Color.fromARGB(255, 229, 30, 30),
+                                      ],
+                                    ),
+                                    onTap: () {},
                                   ),
-                                  onTap: () {},
-                                ),
+                                  _roundedButton(
+                                    icon: Icons.transfer_within_a_station,
+                                    label: "Transfer",
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color.fromARGB(255, 119, 121, 0),
+                                        const Color.fromARGB(255, 177, 159, 0),
+                                      ],
+                                    ),
+                                    onTap: () {},
+                                  ),
+                                  _roundedButton(
+                                    icon: Icons.map_sharp,
+                                    label: "View Map",
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.blue.shade400,
+                                        const Color.fromARGB(255, 0, 41, 77),
+                                      ],
+                                    ),
+                                    onTap: () {},
+                                  ),
+                                ],
+                              ),
 
-                                _roundedButton(
-                                  icon: Icons.transfer_within_a_station,
-                                  label: "Transfer",
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      const Color.fromARGB(255, 119, 121, 0),
-                                      const Color.fromARGB(255, 177, 159, 0),
-                                    ],
-                                  ),
-                                  onTap: () {},
+                            // Optional: Message when the order is finalized
+                            if (currentStatus == "Completed" ||
+                                currentStatus == "Cancelled")
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20.0,
                                 ),
-                                _roundedButton(
-                                  icon: Icons.map_sharp,
-                                  label: "View Map",
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.blue.shade400,
-                                      const Color.fromARGB(255, 0, 41, 77),
-                                    ],
+                                child: Text(
+                                  "Order Status: ${currentStatus}. No further action required.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
                                   ),
-                                  onTap: () {},
                                 ),
-                              ],
-                            ),
+                              ),
+
+                            const SizedBox(height: 16),
+
+                            // Row(
+                            //   mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            //   children: [
+                            //     _roundedButton(
+                            //       icon: Icons.keyboard_return,
+                            //       label: "Return",
+                            //       gradient: LinearGradient(
+                            //         colors: [
+                            //           const Color.fromARGB(255, 155, 72, 34),
+                            //           const Color.fromARGB(255, 229, 30, 30),
+                            //         ],
+                            //       ),
+                            //       onTap: () {},
+                            //     ),
+                            //     // _roundedButton(
+                            //     //   icon: Icons.transfer_within_a_station,
+                            //     //   label: "Transfer",
+                            //     //   gradient: LinearGradient(
+                            //     //     colors: [
+                            //     //       const Color.fromARGB(255, 119, 121, 0),
+                            //     //       const Color.fromARGB(255, 177, 159, 0),
+                            //     //     ],
+                            //     //   ),
+                            //     //   onTap: () {},
+                            //     // ),
+                            //     // _roundedButton(
+                            //     //   icon: Icons.map_sharp,
+                            //     //   label: "View Map",
+                            //     //   gradient: LinearGradient(
+                            //     //     colors: [
+                            //     //       Colors.blue.shade400,
+                            //     //       const Color.fromARGB(255, 0, 41, 77),
+                            //     //     ],
+                            //     //   ),
+                            //     //   onTap: () {},
+                            //     // ),
+                            //   ],
+                            // ),
                             const SizedBox(height: 30),
                           ],
                         ),
@@ -548,8 +759,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  // ---------- NEW HELPER WIDGETS ----------
-
+  // ---------- HELPER WIDGETS ----------
   Widget _summaryCard({
     required IconData icon,
     required String title,
@@ -662,7 +872,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  // ---------- KEEP YOUR EXISTING _infoCard, _buildInfoRow, _actionButton ----------
   Widget _infoCard({
     required String title,
     required Color color,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:riderapp/screens/earnings_dashboard_page.dart';
-import 'package:riderapp/screens/orders/order_detail_page.dart';
 import 'package:riderapp/screens/profile_page.dart';
 import 'package:riderapp/screens/qr.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'orders/orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,89 +15,193 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-
-  // Mock summary data
-  final int totalOrders = 120;
-  final int completedOrders = 85;
-  final int pendingOrders = 15;
-  final int acceptedOrders = 10;
-  final int cancelledOrders = 10;
-
-  // Day-wise sample data
-  final List<Map<String, dynamic>> dayWiseSummary = [
-    {
-      "date": "Oct 07, 2025",
-      "total": 12,
-      "completed": 8,
-      "pending": 2,
-      "accepted": 1,
-      "cancelled": 1,
-    },
-    {
-      "date": "Oct 06, 2025",
-      "total": 14,
-      "completed": 10,
-      "pending": 3,
-      "accepted": 1,
-      "cancelled": 0,
-    },
-    {
-      "date": "Oct 05, 2025",
-      "total": 9,
-      "completed": 7,
-      "pending": 1,
-      "accepted": 1,
-      "cancelled": 0,
-    },
-  ];
-
-  final List<Widget> _pages = [];
+  final supabase = Supabase.instance.client;
+  bool isLoading = true;
+  List<dynamic> allOrders = [];
 
   @override
   void initState() {
     super.initState();
-    _pages.addAll([
-      _buildHomeOverview(),
-      const OrdersScreen(),
-      const ProfilePage(),
-    ]);
+    fetchAllOrders();
   }
 
+  Future<void> fetchAllOrders() async {
+    setState(() => isLoading = true);
+    try {
+      final response = await supabase.from('orders').select();
+
+      setState(() {
+        allOrders = response;
+        isLoading = false;
+      });
+
+      // ✅ Print summary and classify data
+      debugPrint("==== DATA FETCHED ====");
+      debugPrint("Total Orders: ${allOrders.length}");
+
+      classifyOrders(allOrders.cast<Map<String, dynamic>>());
+    } catch (e) {
+      debugPrint('Error fetching orders: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  // --- Summary calculations ---
+  int get totalOrders => allOrders.length;
+  int get completedOrders => allOrders
+      .where(
+        (o) =>
+            o['status']?.toString().toLowerCase().contains('completed') ??
+            false,
+      )
+      .length;
+
+  int get pendingOrders => allOrders
+      .where(
+        (o) =>
+            o['status']?.toString().toLowerCase().contains('requested') ??
+            false,
+      )
+      .length;
+
+  int get acceptedOrders => allOrders
+      .where(
+        (o) =>
+            o['status']?.toString().toLowerCase().contains('ongoing') ?? false,
+      )
+      .length;
+
+  int get cancelledOrders => allOrders
+      .where(
+        (o) =>
+            o['status']?.toString().toLowerCase().contains('cancelled') ??
+            false,
+      )
+      .length;
+
+  List<Map<String, dynamic>> getDayWiseSummary() {
+    final Map<String, Map<String, dynamic>> summary = {};
+
+    for (var order in allOrders) {
+      final createdAt = order['created_at']?.toString() ?? '';
+      final date = createdAt.isNotEmpty
+          ? createdAt.split('T').first
+          : 'Unknown';
+
+      if (!summary.containsKey(date)) {
+        summary[date] = {
+          "date": date,
+          "total": 0,
+          "completed": 0,
+          "pending": 0,
+          "accepted": 0,
+          "cancelled": 0,
+        };
+      }
+
+      summary[date]!['total'] = summary[date]!['total'] + 1;
+
+      final status = order['status']?.toString().toLowerCase() ?? 'unknown';
+
+      if (status.contains('completed')) {
+        summary[date]!['completed']++;
+      } else if (status.contains('requested')) {
+        summary[date]!['pending']++;
+      } else if (status.contains('ongoing')) {
+        summary[date]!['accepted']++;
+      } else if (status.contains('cancelled')) {
+        summary[date]!['cancelled']++;
+      }
+    }
+
+    final sorted = summary.values.toList()
+      ..sort((a, b) => b['date'].compareTo(a['date']));
+    return sorted;
+  }
+
+  // ✅ Classification logic (COD, Delivery, etc.)
+  void classifyOrders(List<Map<String, dynamic>> orders) {
+    print("==== RAW ORDERS ====");
+    for (var order in orders) {
+      print(order);
+    }
+
+    int totalOrders = orders.length;
+
+    int completed = 0;
+    int pending = 0;
+    int accepted = 0;
+    int cancelled = 0;
+
+    double totalCOD = 0;
+    double completedCOD = 0;
+    double pendingCOD = 0;
+    double acceptedCOD = 0;
+    double cancelledCOD = 0;
+    double totalDeliveryCharge = 0;
+
+    for (var order in orders) {
+      final status = (order['status'] ?? '').toString().toLowerCase();
+      final cod =
+          double.tryParse(order['cod_amount']?.toString() ?? '0') ?? 0.0;
+      final deliveryCharge =
+          double.tryParse(order['delivery_charge']?.toString() ?? '0') ?? 0.0;
+
+      totalCOD += cod;
+      totalDeliveryCharge += deliveryCharge;
+
+      if (status.contains('completed')) {
+        completed++;
+        completedCOD += cod;
+      } else if (status.contains('pending') || status.contains('requested')) {
+        pending++;
+        pendingCOD += cod;
+      } else if (status.contains('accepted') || status.contains('ongoing')) {
+        accepted++;
+        acceptedCOD += cod;
+      } else if (status.contains('cancelled')) {
+        cancelled++;
+        cancelledCOD += cod;
+      }
+    }
+
+    print("==== SUMMARY ====");
+    print("Total Orders: $totalOrders");
+    print("Completed Orders: $completed (COD: Rs $completedCOD)");
+    print("Pending Orders: $pending (COD: Rs $pendingCOD)");
+    print("Accepted Orders: $accepted (COD: Rs $acceptedCOD)");
+    print("Cancelled Orders: $cancelled (COD: Rs $cancelledCOD)");
+    print("Total COD: Rs $totalCOD");
+    print("Total Delivery Charge: Rs $totalDeliveryCharge");
+  }
+
+  // --- UI ---
   Widget _buildHomeOverview() {
+    if (isLoading) return _buildShimmerOverview();
+
+    final dayWiseSummary = getDayWiseSummary();
+
+    // Calculate earnings (you can change logic here)
+    double totalCOD = 0;
+    double totalDeliveryCharge = 0;
+
+    for (var order in allOrders) {
+      totalCOD += (order['cod_amount'] ?? 0).toDouble();
+      totalDeliveryCharge += (order['delivery_charge'] ?? 0).toDouble();
+    }
+
+    double totalEarnings = totalCOD + totalDeliveryCharge;
+
+    debugPrint(
+      "💰 Total COD: $totalCOD, Delivery Charge: $totalDeliveryCharge, Earnings: $totalEarnings",
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "👋 Hello, Rider",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-
-              CircleAvatar(
-                backgroundColor: Colors.green,
-                radius: 26,
-                child: const Icon(Icons.person, color: Colors.white, size: 28),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Here’s your delivery summary",
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-          ),
-          const SizedBox(height: 25),
-
-          // Ride Overview
-          const Text(
-            "📊 Ride Overview",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 15),
+          // Stats Grid
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -108,13 +213,18 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildStatCard(
                 Icons.list_alt,
                 "Total Orders",
+                "${completedOrders}",
+
                 totalOrders,
+
                 Colors.deepPurpleAccent,
                 Colors.purple,
               ),
               _buildStatCard(
                 Icons.check_circle,
                 "Completed",
+                "${completedOrders}",
+
                 completedOrders,
                 Colors.green,
                 Colors.teal,
@@ -122,13 +232,18 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildStatCard(
                 Icons.access_time,
                 "Pending",
+                "${completedOrders}",
+
                 pendingOrders,
+
                 Colors.orangeAccent,
                 Colors.deepOrange,
               ),
               _buildStatCard(
                 Icons.done_all,
                 "Accepted",
+                "${completedOrders}",
+
                 acceptedOrders,
                 Colors.blueAccent,
                 Colors.indigo,
@@ -136,36 +251,33 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildStatCard(
                 Icons.cancel,
                 "Cancelled",
+                "${completedOrders}",
+
                 cancelledOrders,
                 Colors.redAccent,
                 Colors.deepOrange,
               ),
-             InkWell(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const EarningsDashboardPage()),
-    );
-  },
-  child: _buildStatCard(
-    Icons.monetization_on,
-    "Earnings",
-    5500,
-    Colors.teal,
-    Colors.green,
-  ),
-),
-
+              InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EarningsDashboardPage(),
+                  ),
+                ),
+                child: _buildStatCard(
+                  Icons.monetization_on,
+                  "Earnings",
+                  "${completedOrders}",
+                  totalEarnings.toInt(), // 👈 dynamic value now
+                  Colors.teal,
+                  Colors.green,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 30),
 
-          // Day-wise Summary
-          const Text(
-            "📅 Day-wise Summary",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 12),
+          // Day-wise Table
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -192,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               children: [
                 _buildTableHeader(),
-                ...dayWiseSummary.map((day) => _buildTableRow(day)),
+                ...dayWiseSummary.map(_buildTableRow),
               ],
             ),
           ),
@@ -218,10 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   TableRow _buildTableHeader() {
     return TableRow(
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: Colors.green.withOpacity(0.1)),
       children: const [
         _TableCell("Date", bold: true),
         _TableCell("Total", bold: true),
@@ -235,25 +344,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   TableRow _buildTableRow(Map<String, dynamic> data) {
     return TableRow(
-      decoration: const BoxDecoration(),
       children: [
-        _TableCell(data["date"]),
-        _TableCell(data["total"].toString()),
+        _TableCell(data["date"] ?? "Unknown"),
+        _TableCell((data["total"] ?? 0).toString()),
         _TableCell(
-          data["completed"].toString(),
+          (data["completed"] ?? 0).toString(),
           color: Colors.green.withOpacity(0.9),
         ),
         _TableCell(
-          data["pending"].toString(),
+          (data["pending"] ?? 0).toString(),
           color: Colors.orangeAccent.withOpacity(0.9),
         ),
         _TableCell(
-          data["accepted"].toString(),
+          (data["accepted"] ?? 0).toString(),
           color: Colors.blueAccent.withOpacity(0.9),
         ),
         _TableCell(
-          data["cancelled"].toString(),
-          color: Colors.green.withOpacity(0.9),
+          (data["cancelled"] ?? 0).toString(),
+          color: Colors.redAccent.withOpacity(0.9),
         ),
       ],
     );
@@ -262,6 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStatCard(
     IconData icon,
     String title,
+    String COD,
     int count,
     Color startColor,
     Color endColor,
@@ -298,14 +407,28 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  COD,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -315,22 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActivityTile(String message, String time) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const OrderDetailPage(
-              orderNumber: '',
-              status: '',
-              pickup: '',
-              drop: '',
-              codAmount: '',
-              dateTime: '',
-            ),
-          ),
-        );
-      },
-
+      onTap: () {},
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -377,54 +485,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
+    final pages = [
+      _buildHomeOverview(),
+      const OrdersScreen(),
+      const ProfilePage(),
+    ];
+
     return Scaffold(
-      body: _pages[_selectedIndex],
+      body: pages[_selectedIndex],
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const QRScannerScreen()),
-                );
-              },
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QRScannerScreen()),
+              ),
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               child: const Icon(Icons.qr_code_scanner, size: 28),
             )
-          : null, // Only show FAB on Home tab
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      bottomNavigationBar: Container(
-        margin: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.9),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          selectedItemColor: Colors.green,
-          unselectedItemColor: Colors.grey,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.local_taxi),
-              label: "Orders",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-          ],
-        ),
+          : null,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        selectedItemColor: Colors.green,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_taxi),
+            label: "Orders",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
+        ],
       ),
     );
   }
@@ -435,7 +528,6 @@ class _TableCell extends StatelessWidget {
   final String text;
   final bool bold;
   final Color? color;
-
   const _TableCell(this.text, {this.bold = false, this.color});
 
   @override
@@ -453,4 +545,73 @@ class _TableCell extends StatelessWidget {
       ),
     );
   }
+}
+
+// ✅ Shimmer Loading View
+Widget _buildShimmerOverview() {
+  return SingleChildScrollView(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.2,
+          children: List.generate(
+            6,
+            (index) => Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        Column(
+          children: List.generate(
+            5,
+            (index) => Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 30),
+        Column(
+          children: List.generate(
+            3,
+            (index) => Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

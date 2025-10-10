@@ -26,19 +26,29 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     // Simulate scanning delay of 4 seconds
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const OrderDetailPage(
-              orderNumber: 'grg',
-              status: 'grg',
-              pickup: 'ferf',
-              drop: 'fef',
-              codAmount: 'rtge',
-              dateTime: 'fedwf',
-            ),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => OrderDetailPage(
+        //       orderNumber: order['id'].toString(),
+        //       status: order['status'] ?? widget.tabName,
+        //       pickup: order['pickup'] ?? 'Unknown pickup',
+        //       drop: order['drop'] ?? 'Unknown drop',
+        //       codAmount: "Rs ${order['cod_amount'] ?? 0}",
+        //       deliveryCharge: "Rs ${order['delivery_charge'] ?? 0}",
+        //       dateTime: order['created_at'] ?? 'N/A',
+        //       senderName: order['sender_name'] ?? 'N/A',
+        //       senderPhone: order['sender_phone'] ?? 'N/A',
+        //       senderAddress: order['pickup'] ?? 'Unknown pickup',
+        //       receiverName: order['receiver_name'] ?? 'N/A',
+        //       receiverPhone: order['receiver_phone'] ?? 'N/A',
+        //       receiverAddress: order['drop'] ?? 'Unknown drop',
+        //       packages: List<Map<String, dynamic>>.from(
+        //         order['packages'] ?? [],
+        //       ),
+        //     ),
+        //   ),
+        // );
       }
     });
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'screens/login_screen.dart';
 import 'screens/otp_screen.dart';
 import 'screens/home_screen.dart';
@@ -7,7 +8,7 @@ import 'screens/home_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Initialize Supabase here
+  // Initialize Supabase
   await Supabase.initialize(
     url: 'https://qkvqajnigyerjccmaack.supabase.co',
     anonKey: 'sb_publishable_3G-ynuAmWKzhrvp28LLfRg_hbUsbuK3',
@@ -28,11 +29,11 @@ class RideApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/otp': (context) => const OTPScreen(),
         '/home': (context) => const HomeScreen(),
+        // Removed '/otp' because OTPScreen requires parameters
       },
     );
   }

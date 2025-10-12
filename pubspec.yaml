@@ -39,6 +39,8 @@ dependencies:
   fl_chart: ^1.1.1
   supabase_flutter: ^2.10.3
   shimmer: ^3.0.0
+  device_info_plus: ^12.1.0
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:

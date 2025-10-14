@@ -124,25 +124,27 @@ class ApiService {
   static Future<http.Response> verifyOtp({
     required String phone,
     required String code,
-    required String token, // <-- Add token here
+    required String token,
   }) async {
     final payload = {"address": phone, "type": "phone", "code": code};
 
     final url = Uri.parse(ApiEndpoints.verifyOtp);
     print("[ApiService] Verify OTP URL: $url");
     print("[ApiService] Payload to send: ${jsonEncode(payload)}");
+    print("[ApiService] Using token: $token");
 
     try {
       final response = await http.post(
         url,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token", // <-- Send token here
+          "token": token, // ✅ matches Postman setup
         },
         body: jsonEncode(payload),
       );
 
       print("[ApiService] Response status code: ${response.statusCode}");
+      print("[ApiService] Response headers: ${response.headers}");
       print("[ApiService] Response body: ${response.body}");
 
       return response;

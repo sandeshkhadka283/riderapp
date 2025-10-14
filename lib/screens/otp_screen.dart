@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:riderapp/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OTPScreen extends StatefulWidget {
   final String phone;
@@ -37,6 +38,9 @@ class _OTPScreenState extends State<OTPScreen> {
 
       if (response.statusCode == 200) {
         // Success: navigate to home screen
+        // Save accessToken to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('accessToken', widget.accessToken);
         Navigator.pushReplacementNamed(context, '/home');
       } else {
         final errorMsg = response.body.isNotEmpty

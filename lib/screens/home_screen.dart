@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:riderapp/screens/earnings_dashboard_page.dart';
 import 'package:riderapp/screens/profile_page.dart';
 import 'package:riderapp/screens/qr.dart';
+import 'package:riderapp/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'orders/orders_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,11 +22,67 @@ class _HomeScreenState extends State<HomeScreen> {
   final supabase = Supabase.instance.client;
   bool isLoading = true;
   List<dynamic> allOrders = [];
+  bool isVerified = false;
+  bool _hasShownDialog = false; // to prevent multiple dialogs per launch
 
   @override
   void initState() {
     super.initState();
+    _checkVerification();
     fetchAllOrders();
+  }
+
+  Future<void> _checkVerification() async {
+    final prefs = await SharedPreferences.getInstance();
+    isVerified = prefs.getBool('isVerified') ?? false;
+
+    if (!isVerified && !_hasShownDialog && mounted) {
+      _hasShownDialog = true;
+      _showNotVerifiedDialog();
+    }
+
+    setState(() {}); // update UI for FloatingActionButton
+  }
+
+  Future<void> _loadVerificationStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    isVerified = prefs.getBool('isVerified') ?? false;
+
+    if (!isVerified) {
+      _showNotVerifiedDialog();
+    }
+
+    setState(() {});
+  }
+
+  void _showNotVerifiedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // cannot dismiss
+      builder: (context) {
+        return WillPopScope(
+          onWillPop: () async => false, // disable back button
+          child: AlertDialog(
+            title: const Text("🚫 Not Verified"),
+            content: const Text(
+              "Your account/license is not verified. Please verify to continue using the app.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilePage()),
+                  );
+                },
+                child: const Text("Go to Profile"),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> fetchAllOrders() async {
@@ -494,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: pages[_selectedIndex],
-      floatingActionButton: _selectedIndex == 0
+      floatingActionButton: (_selectedIndex == 0 && isVerified)
           ? FloatingActionButton(
               onPressed: () => Navigator.push(
                 context,
@@ -505,6 +565,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.qr_code_scanner, size: 28),
             )
           : null,
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),

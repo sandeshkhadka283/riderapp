@@ -153,4 +153,45 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// Fetch available delivery vehicles
+  static Future<http.Response> fetchAvailableVehicles({
+    required String token,
+    double lat = 0.0,
+    double lng = 0.0,
+    int limit = 10,
+    int start = 0,
+  }) async {
+    final url = Uri.parse(
+      "${ApiEndpoints.fetchAvailableVehicles}?limit=$limit&start=$start&lat=$lat&lng=$lng",
+    );
+
+    print("[ApiService] Fetching available vehicles from: $url");
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "token": token, // same header style as verifyOtp()
+        },
+      );
+
+      print("[ApiService] Response status code: ${response.statusCode}");
+      print("[ApiService] Response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        print("✅ Vehicles fetched successfully");
+      } else if (response.statusCode == 401) {
+        print("⚠️ Unauthorized: Token expired or invalid");
+      } else if (response.statusCode == 404) {
+        print("❌ Endpoint not found: Check API path or backend routes");
+      }
+
+      return response;
+    } catch (e) {
+      print("[ApiService] Network error: $e");
+      rethrow;
+    }
+  }
 }
